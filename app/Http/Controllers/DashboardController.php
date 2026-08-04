@@ -5,15 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Card;
 use App\Models\Set;
 use App\Models\Rarity;
+use App\Models\UserCard;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $totalCards = Card::sum('quantity');
+        $totalCards = Card::count();
         $totalSets = Set::count();
-        $totalValue = Card::sum(\DB::raw('value * quantity'));
-        $uniqueCards = Card::count();
+        $uniqueCards = Card::where('is_alt', false)->count();
+        $collectedCount = UserCard::where('user_id', auth()->id())->count();
+        $notCollectedCount = $totalCards - $collectedCount;
+        $totalValue = UserCard::where('user_id', auth()->id())->sum(function($uc) {
+            return (float)($uc->value * $uc->copies_owned);
+        }) ?? 0;
 
         $seriesStats = Card::selectRaw('sets.series, COUNT(*) as total_cards')
             ->join('sets', 'cards.set_id', '=', 'sets.id')
@@ -35,13 +41,9 @@ class DashboardController extends Controller
             ->get();
 
         return view('dashboard', compact(
-            'totalCards',
-            'totalSets',
-            'totalValue',
-            'uniqueCards',
-            'seriesStats',
-            'rarityStats',
-            'setStats'
+            'totalCards', 'totalSets', 'uniqueCards', 'totalValue',
+            'seriesStats', 'rarityStats', 'setStats',
+            'collectedCount', 'notCollectedCount'
         ));
     }
 }

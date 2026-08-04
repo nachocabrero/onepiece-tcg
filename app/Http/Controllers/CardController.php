@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\UserCard;
 use App\Models\Card;
 use App\Models\Set;
 use App\Models\Rarity;
@@ -11,134 +12,132 @@ class CardController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Card::with(['set', 'rarity'])
-            ->select('cards.*')
-            ->join('sets', 'cards.set_id', '=', 'sets.id');
+        $query = UserCard::with(['card.set', 'card.rarity'])
+            ->where('user_id', auth()->id());
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('card_number', 'like', "%{$search}%")
-                  ->orWhere('character', 'like', "%{$search}%");
+                $q->whereHas('card', function($cardQuery) use ($search) {
+                    $cardQuery->where('name', 'like', "%{$search}%")
+                              ->orWhere('card_number', 'like', "%{$search}%")
+                              ->orWhere('character', 'like', "%{$search}%");
+                });
             });
         }
 
         if ($request->filled('set_id')) {
-            $query->where('set_id', $request->set_id);
+            $query->whereHas('card', function($q) use ($request) {
+                $q->where('set_id', $request->set_id);
+            });
         }
 
         if ($request->filled('rarity_id')) {
-            $query->where('rarity_id', $request->rarity_id);
+            $query->whereHas('card', function($q) use ($request) {
+                $q->where('rarity_id', $request->rarity_id);
+            });
         }
 
         if ($request->filled('color')) {
-            $query->where('color', $request->color);
-        }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->filled('attribute')) {
-            $query->where('attribute', $request->attribute);
+            $query->whereHas('card', function($q) use ($request) {
+                $q->where('color', $request->color);
+            });
         }
 
         if ($request->filled('duplicates')) {
-            $query->duplicates();
+            $query->where('copies_owned', '>', 1);
         }
 
         if ($request->filled('no_duplicates')) {
-            $query->noDuplicates();
+            $query->where('copies_owned', 1);
         }
 
-        $cards = $query->orderBy('sets.code')->orderBy('card_number')->paginate(20);
+        $cards = $query->orderBy('cards.set_id')->orderBy('cards.card_number')->paginate(20);
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
 
-        // Stats
-        $totalCards = Card::count();
-        $collectedCards = Card::collected()->count();
-        $totalDuplicates = Card::duplicates()->count();
-        $totalSpent = Card::sum('price_paid') ?? 0;
-        $totalMarketValue = Card::all()->sum(function($card) {
-            return (float)($card->value * $card->copies_owned);
+        $collectedCards = UserCard::where('user_id', auth()->id())->count();
+        $totalDuplicates = UserCard::where('user_id', auth()->id())->where('copies_owned', '>', 1)->count();
+        $totalSpent = UserCard::where('user_id', auth()->id())->sum('price_paid') ?? 0;
+        $totalMarketValue = UserCard::where('user_id', auth()->id())->get()->sum(function($uc) {
+            return (float)($uc->value * $uc->copies_owned);
         }) ?? 0;
+        $totalCards = Card::count();
 
         return view('cards.index', compact('cards', 'sets', 'rarities', 'totalCards', 'collectedCards', 'totalDuplicates', 'totalSpent', 'totalMarketValue'));
     }
 
     public function create()
     {
+        $catalogCards = Card::orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
-        return view('cards.create', compact('sets', 'rarities'));
+        return view('cards.create', compact('catalogCards', 'sets', 'rarities'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'set_id' => 'required|exists:sets,id',
-            'card_number' => 'required|string|max:20',
-            'name' => 'required|string|max:255',
-            'character' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:50',
-            'cost' => 'nullable|string|max:10',
-            'power' => 'nullable|string|max:10',
-            'health' => 'nullable|string|max:10',
-            'rarity_id' => 'nullable|exists:rarities,id',
+            'card_id' => 'required|exists:cards,id',
+            'copies_owned' => 'required|integer|min:1',
             'condition' => 'required|string|in:MT,LP,MP,HP,DR',
-            'quantity' => 'required|integer|min:1',
-            'value' => 'nullable|numeric|min:0',
             'price_paid' => 'nullable|numeric|min:0',
-            'copies_owned' => 'nullable|integer|min:1',
+            'value' => 'nullable|numeric|min:0',
             'copies_wanted' => 'nullable|integer|min:0',
-            'ability' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
 
-        Card::create($validated);
+        $userCard = UserCard::where('user_id', auth()->id())
+            ->where('card_id', $validated['card_id'])
+            ->first();
 
-        return redirect()->route('cards.index')->with('success', 'Carta añadida correctamente.');
+        if ($userCard) {
+            $userCard->update($validated);
+            return redirect()->route('cards.index')->with('success', 'Carta actualizada en la colección.');
+        }
+
+        UserCard::create(array_merge($validated, ['user_id' => auth()->id()]));
+
+        return redirect()->route('cards.index')->with('success', 'Carta añadida a la colección.');
     }
 
-    public function edit(Card $card)
+    public function edit(UserCard $card)
     {
+        if ($card->user_id !== auth()->id()) {
+            abort(403);
+        }
+        $catalogCards = Card::orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
-        return view('cards.edit', compact('card', 'sets', 'rarities'));
+        return view('cards.edit', compact('card', 'catalogCards', 'sets', 'rarities'));
     }
 
-    public function update(Request $request, Card $card)
+    public function update(Request $request, UserCard $card)
     {
+        if ($card->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
-            'set_id' => 'required|exists:sets,id',
-            'card_number' => 'required|string|max:20',
-            'name' => 'required|string|max:255',
-            'character' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:50',
-            'cost' => 'nullable|string|max:10',
-            'power' => 'nullable|string|max:10',
-            'health' => 'nullable|string|max:10',
-            'rarity_id' => 'nullable|exists:rarities,id',
+            'card_id' => 'required|exists:cards,id',
+            'copies_owned' => 'required|integer|min:1',
             'condition' => 'required|string|in:MT,LP,MP,HP,DR',
-            'quantity' => 'required|integer|min:1',
-            'value' => 'nullable|numeric|min:0',
             'price_paid' => 'nullable|numeric|min:0',
-            'copies_owned' => 'nullable|integer|min:1',
+            'value' => 'nullable|numeric|min:0',
             'copies_wanted' => 'nullable|integer|min:0',
-            'ability' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
 
         $card->update($validated);
-
         return redirect()->route('cards.index')->with('success', 'Carta actualizada correctamente.');
     }
 
-    public function destroy(Card $card)
+    public function destroy(UserCard $card)
     {
+        if ($card->user_id !== auth()->id()) {
+            abort(403);
+        }
         $card->delete();
-        return redirect()->route('cards.index')->with('success', 'Carta eliminada correctamente.');
+        return redirect()->route('cards.index')->with('success', 'Carta eliminada de la colección.');
     }
 }

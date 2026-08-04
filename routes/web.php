@@ -6,20 +6,32 @@ use App\Http\Controllers\CardController;
 use App\Http\Controllers\SetController;
 use App\Http\Controllers\RarityController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\Auth\LoginController;
 
-// Dashboard
+// Public routes
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-
-// Catalog (all available cards)
 Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/catalog/{card}', [CatalogController::class, 'show'])->name('catalog.show');
-Route::post('/catalog/{card}/toggle', [CatalogController::class, 'toggleCollected'])->name('catalog.toggle');
 
-// Cards (my collection)
-Route::resource('cards', CardController::class);
+// Auth routes
+Route::get('/login', [LoginController::class, 'show'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-// Sets
-Route::resource('sets', SetController::class);
+// Authenticated routes
+Route::middleware('auth')->group(function () {
+    // Collection routes
+    Route::get('/cards', [CardController::class, 'index'])->name('cards.index');
+    Route::get('/cards/create', [CardController::class, 'create'])->name('cards.create');
+    Route::post('/cards', [CardController::class, 'store'])->name('cards.store');
+    Route::get('/cards/{card}/edit', [CardController::class, 'edit'])->name('cards.edit');
+    Route::put('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
+    Route::delete('/cards/{card}', [CardController::class, 'destroy'])->name('cards.destroy');
 
-// Rarities
-Route::resource('rarities', RarityController::class);
+    // Catalog toggle
+    Route::post('/catalog/{card}/toggle', [CatalogController::class, 'toggleCollected'])->name('catalog.toggle');
+
+    // CRUD routes
+    Route::resource('sets', SetController::class);
+    Route::resource('rarities', RarityController::class);
+});

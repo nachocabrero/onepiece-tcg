@@ -5,15 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Card;
 use App\Models\Set;
 use App\Models\Rarity;
+use App\Models\UserCard;
 use Illuminate\Http\Request;
 
 class CatalogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Card::with(['set', 'rarity'])
-            ->select('cards.*')
-            ->join('sets', 'cards.set_id', '=', 'sets.id');
+        $query = Card::with(['set', 'rarity']);
 
         // Filters
         if ($request->filled('search')) {
@@ -46,14 +45,6 @@ class CatalogController extends Controller
             $query->where('attribute', $request->attribute);
         }
 
-        if ($request->filled('collected')) {
-            if ($request->collected === '1') {
-                $query->collected();
-            } else {
-                $query->notCollected();
-            }
-        }
-
         $cards = $query->orderBy('sets.code')
                        ->orderBy('card_number')
                        ->paginate(50);
@@ -61,40 +52,69 @@ class CatalogController extends Controller
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
 
-        // Get unique values for filter dropdowns
         $colors = Card::select('color')->distinct()->pluck('color');
         $types = Card::select('type')->distinct()->pluck('type');
         $attributes = Card::select('attribute')->distinct()->pluck('attribute');
 
         // Stats
         $totalCards = Card::count();
-        $collectedCount = Card::collected()->count();
+        $collectedCount = auth()->check() ? UserCard::where('user_id', auth()->id())->count() : 0;
         $notCollectedCount = $totalCards - $collectedCount;
+
+        // Get user's collected card IDs
+        $collectedIds = collect();
+        if (auth()->check()) {
+            $collectedIds = UserCard::where('user_id', auth()->id())->pluck('card_id');
+        }
 
         return view('catalog.index', compact(
             'cards', 'sets', 'rarities', 'colors', 'types', 'attributes',
-            'totalCards', 'collectedCount', 'notCollectedCount'
+            'totalCards', 'collectedCount', 'notCollectedCount', 'collectedIds'
         ));
     }
 
     public function show(Card $card)
     {
         $card->load(['set', 'rarity']);
-        return view('catalog.show', compact('card'));
+        
+        $userCard = null;
+        $collectedIds = collect();
+        if (auth()->check()) {
+            $userCard = UserCard::where('user_id', auth()->id())->where('card_id', $card->id)->first();
+            $collectedIds = UserCard::where('user_id', auth()->id())->pluck('card_id');
+        }
+        
+        return view('catalog.show', compact('card', 'userCard', 'collectedIds'));
     }
 
     public function toggleCollected(Card $card)
     {
-        $card->update(['is_collected' => !$card->is_collected]);
+        $user = auth()->user();
+        $userCard = UserCard::where('user_id', $user->id)->where('card_id', $card->id)->first();
+        
+        if ($userCard) {
+            $userCard->delete();
+            $message = 'Carta eliminada de la colección';
+        } else {
+            UserCard::create([
+                'user_id' => $user->id,
+                'card_id' => $card->id,
+                'copies_owned' => 1,
+                'condition' => 'MT',
+                'price_paid' => 0,
+                'value' => 0,
+                'copies_wanted' => 0,
+            ]);
+            $message = 'Carta añadida a la colección';
+        }
         
         if (request()->header('X-Requested-With') === 'XMLHttpRequest' || request()->ajax()) {
             return response()->json([
                 'success' => true,
-                'is_collected' => $card->is_collected,
-                'message' => $card->is_collected ? 'Carta añadida a la colección' : 'Carta eliminada de la colección'
+                'message' => $message
             ]);
         }
         
-        return back()->with('success', $card->is_collected ? 'Carta añadida a la colección' : 'Carta eliminada de la colección');
+        return back()->with('success', $message);
     }
 }
