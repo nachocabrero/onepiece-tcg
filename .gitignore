@@ -1,0 +1,12 @@
+.env
+vendor/
+node_modules/
+storage/*.key
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+/.phpunit.result.cache
+composer.lock
+.DS_Store
+Thumbs.db
