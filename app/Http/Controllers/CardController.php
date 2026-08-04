@@ -52,7 +52,9 @@ class CardController extends Controller
             $query->where('copies_owned', 1);
         }
 
-        $cards = $query->orderBy('cards.set_id')->orderBy('cards.card_number')->paginate(20);
+        $cards = $query->join('cards', 'user_cards.card_id', '=', 'cards.id')
+            ->select('user_cards.*')
+            ->orderBy('cards.set_id')->orderBy('cards.card_number')->paginate(20);
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
 

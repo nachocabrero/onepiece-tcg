@@ -17,9 +17,9 @@ class DashboardController extends Controller
         $uniqueCards = Card::where('is_alt', false)->count();
         $collectedCount = UserCard::where('user_id', auth()->id())->count();
         $notCollectedCount = $totalCards - $collectedCount;
-        $totalValue = UserCard::where('user_id', auth()->id())->sum(function($uc) {
-            return (float)($uc->value * $uc->copies_owned);
-        }) ?? 0;
+        $totalValue = UserCard::where('user_id', auth()->id())
+            ->selectRaw('COALESCE(SUM(value * copies_owned), 0) as total_value')
+            ->value('total_value');
 
         $seriesStats = Card::selectRaw('sets.series, COUNT(*) as total_cards')
             ->join('sets', 'cards.set_id', '=', 'sets.id')
