@@ -44,16 +44,20 @@ class DashboardController extends Controller
         $user = auth()->user();
         $setCompletion = DB::table('sets')
             ->leftJoin('cards', 'sets.id', '=', 'cards.set_id')
-            ->leftJoin('user_cards', function($join) use ($user) {
-                $join->on('cards.id', '=', 'user_cards.card_id')
-                     ->where('user_cards.user_id', '=', $user->id);
-            })
             ->select(
                 'sets.code',
                 'sets.name',
                 DB::raw('COUNT(DISTINCT cards.id) as total_cards'),
-                DB::raw('COUNT(DISTINCT user_cards.card_id) as collected_cards')
+                $user
+                    ? DB::raw('COUNT(DISTINCT user_cards.card_id) as collected_cards')
+                    : DB::raw('0 as collected_cards')
             )
+            ->when($user, function ($q) use ($user) {
+                return $q->leftJoin('user_cards', function ($join) use ($user) {
+                    $join->on('cards.id', '=', 'user_cards.card_id')
+                         ->where('user_cards.user_id', '=', $user->id);
+                });
+            })
             ->groupBy('sets.id', 'sets.code', 'sets.name')
             ->having('total_cards', '>', 0)
             ->orderBy('collected_cards', 'desc')

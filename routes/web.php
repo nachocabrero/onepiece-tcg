@@ -9,7 +9,6 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\Auth\LoginController;
 
 // Public routes
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/catalog/{card}', [CatalogController::class, 'show'])->name('catalog.show');
 
@@ -20,7 +19,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
-    // Collection routes
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/cards', [CardController::class, 'index'])->name('cards.index');
     Route::get('/cards/create', [CardController::class, 'create'])->name('cards.create');
     Route::post('/cards', [CardController::class, 'store'])->name('cards.store');
