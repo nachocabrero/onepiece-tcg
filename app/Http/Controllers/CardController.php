@@ -69,7 +69,9 @@ class CardController extends Controller
 
     public function create()
     {
-        $catalogCards = Card::orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
+        $catalogCards = Card::join('sets', 'cards.set_id', '=', 'sets.id')
+            ->select('cards.*')
+            ->orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
         return view('cards.create', compact('catalogCards', 'sets', 'rarities'));
@@ -106,7 +108,9 @@ class CardController extends Controller
         if ($card->user_id !== auth()->id()) {
             abort(403);
         }
-        $catalogCards = Card::orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
+        $catalogCards = Card::join('sets', 'cards.set_id', '=', 'sets.id')
+            ->select('cards.*')
+            ->orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
         return view('cards.edit', compact('card', 'catalogCards', 'sets', 'rarities'));

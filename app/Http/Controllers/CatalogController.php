@@ -12,7 +12,9 @@ class CatalogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Card::with(['set', 'rarity']);
+        $query = Card::with(['set', 'rarity'])
+            ->select('cards.*')
+            ->join('sets', 'cards.set_id', '=', 'sets.id');
 
         // Filters
         if ($request->filled('search')) {
