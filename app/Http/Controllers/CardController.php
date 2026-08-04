@@ -30,11 +30,40 @@ class CardController extends Controller
             $query->where('rarity_id', $request->rarity_id);
         }
 
+        if ($request->filled('color')) {
+            $query->where('color', $request->color);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('attribute')) {
+            $query->where('attribute', $request->attribute);
+        }
+
+        if ($request->filled('duplicates')) {
+            $query->duplicates();
+        }
+
+        if ($request->filled('no_duplicates')) {
+            $query->noDuplicates();
+        }
+
         $cards = $query->orderBy('sets.code')->orderBy('card_number')->paginate(20);
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
 
-        return view('cards.index', compact('cards', 'sets', 'rarities'));
+        // Stats
+        $totalCards = Card::count();
+        $collectedCards = Card::collected()->count();
+        $totalDuplicates = Card::duplicates()->count();
+        $totalSpent = Card::sum('price_paid') ?? 0;
+        $totalMarketValue = Card::all()->sum(function($card) {
+            return (float)($card->value * $card->copies_owned);
+        }) ?? 0;
+
+        return view('cards.index', compact('cards', 'sets', 'rarities', 'totalCards', 'collectedCards', 'totalDuplicates', 'totalSpent', 'totalMarketValue'));
     }
 
     public function create()
@@ -59,6 +88,9 @@ class CardController extends Controller
             'condition' => 'required|string|in:MT,LP,MP,HP,DR',
             'quantity' => 'required|integer|min:1',
             'value' => 'nullable|numeric|min:0',
+            'price_paid' => 'nullable|numeric|min:0',
+            'copies_owned' => 'nullable|integer|min:1',
+            'copies_wanted' => 'nullable|integer|min:0',
             'ability' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
@@ -90,6 +122,9 @@ class CardController extends Controller
             'condition' => 'required|string|in:MT,LP,MP,HP,DR',
             'quantity' => 'required|integer|min:1',
             'value' => 'nullable|numeric|min:0',
+            'price_paid' => 'nullable|numeric|min:0',
+            'copies_owned' => 'nullable|integer|min:1',
+            'copies_wanted' => 'nullable|integer|min:0',
             'ability' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);

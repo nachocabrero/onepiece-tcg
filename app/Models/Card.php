@@ -21,6 +21,9 @@ class Card extends Model
         'condition',
         'quantity',
         'value',
+        'price_paid',
+        'copies_owned',
+        'copies_wanted',
         'notes',
         'image_url',
         'color',
@@ -35,6 +38,9 @@ class Card extends Model
     protected $casts = [
         'quantity' => 'integer',
         'value' => 'decimal:2',
+        'price_paid' => 'decimal:2',
+        'copies_owned' => 'integer',
+        'copies_wanted' => 'integer',
         'is_alt' => 'boolean',
         'is_collected' => 'boolean',
     ];
@@ -130,5 +136,29 @@ class Card extends Model
     public function scopeByAttribute($query, $attribute)
     {
         return $query->where('attribute', $attribute);
+    }
+
+    // Scope: cards with duplicates
+    public function scopeDuplicates($query)
+    {
+        return $query->where('copies_owned', '>', 1);
+    }
+
+    // Scope: cards with no duplicates
+    public function scopeNoDuplicates($query)
+    {
+        return $query->where('copies_owned', 1);
+    }
+
+    // Accessor: total spent on this card
+    public function getTotalSpentAttribute(): float
+    {
+        return round($this->price_paid * $this->copies_owned, 2);
+    }
+
+    // Accessor: total collection value (market)
+    public function getTotalMarketValueAttribute(): float
+    {
+        return round($this->value * $this->copies_owned, 2);
     }
 }

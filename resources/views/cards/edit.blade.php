@@ -99,17 +99,29 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-1">Cantidad</label>
-                <input type="number" name="quantity" value="{{ old('quantity', $card->quantity) }}" min="1"
+                <input type="number" name="copies_owned" value="{{ old('copies_owned', $card->copies_owned) }}" min="1"
                        class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
             </div>
             <div>
-                <label class="block text-sm text-gray-400 mb-1">Valor (€)</label>
+                <label class="block text-sm text-gray-400 mb-1">Precio pagado (€)</label>
+                <input type="number" name="price_paid" value="{{ old('price_paid', $card->price_paid) }}" step="0.01" min="0"
+                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Valor mercado (€)</label>
                 <input type="number" name="value" value="{{ old('value', $card->value) }}" step="0.01" min="0"
                        class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
             </div>
+        </div>
+
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Copias deseadas (para tracking)</label>
+            <input type="number" name="copies_wanted" value="{{ old('copies_wanted', $card->copies_wanted) }}" min="0"
+                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
+            <span class="text-xs text-gray-500">Déjalo en 0 si no quieres tracking</span>
         </div>
 
         <div>
