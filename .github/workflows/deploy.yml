@@ -1,0 +1,17 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, x64, optcg]
+    timeout-minutes: 25
+    steps:
+      - name: Desplegar en el servidor
+        run: bash /var/www/html/optcg/deploy.sh
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          APP_PORT: ${{ secrets.APP_PORT }}

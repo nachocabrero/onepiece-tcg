@@ -11,7 +11,9 @@ class CardController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Card::with(['set', 'rarity']);
+        $query = Card::with(['set', 'rarity'])
+            ->select('cards.*')
+            ->join('sets', 'cards.set_id', '=', 'sets.id');
 
         if ($request->filled('search')) {
             $search = $request->search;
