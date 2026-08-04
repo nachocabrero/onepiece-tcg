@@ -179,7 +179,16 @@ class ImportCardsCommand extends Command
                 }
 
                 // Parse series code from card number (e.g., "OP16-001" -> "OP-16")
-                if (preg_match('/^([A-Z]+)(\d{2})-(\d+)$/', $cardNumber, $matches)) {
+                // Handle promo cards (P-044) separately
+                if (preg_match('/^P-(\d+)$/', $cardNumber, $matches)) {
+                    // Promo card - use P-001 as default set or skip
+                    $promoSet = Set::where('code', 'P-001')->first();
+                    if (!$promoSet) {
+                        $skipped++;
+                        return;
+                    }
+                    $setId = $promoSet->id;
+                } elseif (preg_match('/^([A-Z]+)(\d+)-(\d+)$/', $cardNumber, $matches)) {
                     $seriesPrefix = $matches[1]; // OP, EB, ST, PRB
                     $seriesNum = str_pad($matches[2], 2, '0', STR_PAD_LEFT); // 01, 02, ...
                     $cardSeq = $matches[3];
@@ -229,6 +238,12 @@ class ImportCardsCommand extends Command
                     '多色' => 'Multicolor',
                 ];
 
+                // Fix image URL (scraper bug: "../images" -> "/images")
+                $imageUrl = $card['Image'] ?? null;
+                if ($imageUrl) {
+                    $imageUrl = str_replace('../images', '/images', $imageUrl);
+                }
+
                 // Create or update card
                 Card::updateOrCreate(
                     [
@@ -247,7 +262,7 @@ class ImportCardsCommand extends Command
                         'quantity' => 0,
                         'value' => 0,
                         'notes' => $card['Feature'] ?? null,
-                        'image_url' => $card['Image'] ?? null,
+                        'image_url' => $imageUrl,
                         'color' => $card['Color'] ?? null,
                         'block_icon' => $card['BlockIcon'] ?? null,
                         'attribute' => $card['Attribute'] ?? null,
