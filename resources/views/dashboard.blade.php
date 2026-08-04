@@ -30,6 +30,26 @@
     </div>
 </div>
 
+<!-- Progress por set -->
+<div class="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
+    <h2 class="text-xl font-semibold mb-4 text-yellow-400">
+        <i class="fas fa-tasks mr-2"></i>Progreso por Set
+    </h2>
+    <div class="space-y-3">
+        @foreach($setCompletion as $set)
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-sm font-medium text-gray-300">{{ $set->code }} - {{ $set->name }}</span>
+                <span class="text-sm text-gray-400">{{ $set->collected_cards }} / {{ $set->total_cards }} ({{ $set->percentage }}%)</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                <div class="bg-yellow-500 h-2.5 rounded-full transition-all" style="width: {{ $set->percentage }}%"></div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+
 <!-- Series breakdown -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">

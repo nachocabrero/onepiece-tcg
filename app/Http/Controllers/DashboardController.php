@@ -40,10 +40,35 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        // Porcentaje de cartas coleccionadas por set
+        $user = auth()->user();
+        $setCompletion = DB::table('sets')
+            ->leftJoin('cards', 'sets.id', '=', 'cards.set_id')
+            ->leftJoin('user_cards', function($join) use ($user) {
+                $join->on('cards.id', '=', 'user_cards.card_id')
+                     ->where('user_cards.user_id', '=', $user->id);
+            })
+            ->select(
+                'sets.code',
+                'sets.name',
+                DB::raw('COUNT(DISTINCT cards.id) as total_cards'),
+                DB::raw('COUNT(DISTINCT user_cards.card_id) as collected_cards')
+            )
+            ->groupBy('sets.id', 'sets.code', 'sets.name')
+            ->having('total_cards', '>', 0)
+            ->orderBy('collected_cards', 'desc')
+            ->get()
+            ->map(function($item) {
+                $item->percentage = $item->total_cards > 0
+                    ? round(($item->collected_cards / $item->total_cards) * 100, 1)
+                    : 0;
+                return $item;
+            });
+
         return view('dashboard', compact(
             'totalCards', 'totalSets', 'uniqueCards', 'totalValue',
             'seriesStats', 'rarityStats', 'setStats',
-            'collectedCount', 'notCollectedCount'
+            'collectedCount', 'notCollectedCount', 'setCompletion'
         ));
     }
 }
