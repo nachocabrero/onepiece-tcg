@@ -12,6 +12,21 @@ class CatalogController extends Controller
 {
     public function index(Request $request)
     {
+        // Save filters to session when applied
+        $filterKeys = ['search', 'set_id', 'rarity_id', 'color', 'type', 'attribute'];
+        foreach ($filterKeys as $key) {
+            if ($request->filled($key)) {
+                session(['catalog_filter_' . $key => $request->$key]);
+            }
+        }
+
+        // Restore filters from session if not in request
+        foreach ($filterKeys as $key) {
+            if (!$request->filled($key) && session()->has('catalog_filter_' . $key)) {
+                $request->merge([$key => session('catalog_filter_' . $key)]);
+            }
+        }
+
         $query = Card::with(['set', 'rarity'])
             ->select('cards.*')
             ->join('sets', 'cards.set_id', '=', 'sets.id');
