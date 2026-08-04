@@ -31,12 +31,6 @@
                 </button>
             </div>
         </form>
-
-        <div class="mt-4 p-3 bg-gray-700/50 rounded text-xs text-gray-400">
-            <p class="font-medium mb-1">Credenciales de prueba:</p>
-            <p>Email: admin@onepiece-tcg.com</p>
-            <p>Pass: admin123</p>
-        </div>
     </div>
 </div>
 @endsection
