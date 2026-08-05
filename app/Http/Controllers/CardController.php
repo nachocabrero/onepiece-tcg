@@ -70,14 +70,15 @@ class CardController extends Controller
         return view('cards.index', compact('cards', 'sets', 'rarities', 'totalCards', 'collectedCards', 'totalDuplicates', 'totalSpent', 'totalMarketValue'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $catalogCards = Card::join('sets', 'cards.set_id', '=', 'sets.id')
             ->select('cards.*')
             ->orderBy('sets.code')->orderBy('card_number')->limit(100)->get();
         $sets = Set::orderBy('code')->get();
         $rarities = Rarity::orderBy('sort_order')->get();
-        return view('cards.create', compact('catalogCards', 'sets', 'rarities'));
+        $selectedCardId = $request->query('card_id');
+        return view('cards.create', compact('catalogCards', 'sets', 'rarities', 'selectedCardId'));
     }
 
     public function store(Request $request)
@@ -221,5 +222,52 @@ class CardController extends Controller
         ));
 
         return $pdf->download("faltantes_{$set->code}.pdf");
+    }
+
+    public function searchByNumbers(Request $request)
+    {
+        $numbers = $request->query('numbers', '');
+        $nums = array_filter(array_map('trim', preg_split('/[,;\s]+/', $numbers)));
+
+        if (empty($nums)) {
+            return response()->json([]);
+        }
+
+        // Buscar cartas por números
+        $cards = Card::whereIn('card_number', $nums)->get();
+
+        // Obtener las que tiene el usuario
+        $ownedNumbers = UserCard::where('user_id', auth()->id())
+            ->join('cards', 'user_cards.card_id', '=', 'cards.id')
+            ->whereIn('cards.card_number', $nums)
+            ->pluck('cards.card_number')
+            ->toArray();
+
+        // Construir resultado con todas las nums buscadas (en el orden pedido)
+        $cardMap = $cards->keyBy('card_number');
+        $results = [];
+
+        foreach ($nums as $num) {
+            if (isset($cardMap[$num])) {
+                $card = $cardMap[$num];
+                $results[] = [
+                    'id' => $card->id,
+                    'card_number' => $card->card_number,
+                    'name' => $card->name,
+                    'set_code' => $card->set->code ?? '',
+                    'collected' => in_array($num, $ownedNumbers),
+                ];
+            } else {
+                $results[] = [
+                    'id' => null,
+                    'card_number' => $num,
+                    'name' => 'No encontrado en catálogo',
+                    'set_code' => '',
+                    'collected' => false,
+                ];
+            }
+        }
+
+        return response()->json($results);
     }
 }

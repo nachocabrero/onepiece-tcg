@@ -18,7 +18,8 @@
             <select name="card_id" id="cardSelect" required class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
                 <option value="">Seleccionar carta...</option>
                 @foreach($catalogCards as $c)
-                <option value="{{ $c->id }}" data-name="{{ $c->name }}" data-number="{{ $c->card_number }}" data-set="{{ $c->set->code }}">
+                <option value="{{ $c->id }}" data-name="{{ $c->name }}" data-number="{{ $c->card_number }}" data-set="{{ $c->set->code }}"
+                    {{ old('card_id', $selectedCardId ?? '') == $c->id ? 'selected' : '' }}>
                     {{ $c->set->code }} - {{ $c->card_number }} - {{ $c->name }}
                 </option>
                 @endforeach
@@ -85,5 +86,12 @@ document.getElementById('searchCard').addEventListener('input', function() {
         select.options[i].style.display = select.options[i].text.toLowerCase().includes(filter) ? '' : 'none';
     }
 });
+
+// Scroll al select si hay carta pre-seleccionada
+@if($selectedCardId ?? false)
+document.getElementById('cardSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+document.getElementById('cardSelect').classList.add('ring-2', 'ring-yellow-500');
+setTimeout(() => document.getElementById('cardSelect').classList.remove('ring-2', 'ring-yellow-500'), 3000);
+@endif
 </script>
 @endsection

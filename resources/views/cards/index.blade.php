@@ -53,11 +53,45 @@
 </div>
 
 <!-- Filters -->
-<form method="GET" action="{{ route('cards.index') }}" class="mb-6 bg-gray-800 rounded-lg p-3 border border-gray-700">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+<div x-data="cardSearch()" x-ref="searchForm" class="mb-6 bg-gray-800 rounded-lg p-3 border border-gray-700">
+    <!-- Number search -->
+    <div class="mb-3">
+        <button @click="showNumberSearch = !showNumberSearch" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+            <i :class="showNumberSearch ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+            Buscar por número de carta
+        </button>
+        <div x-show="showNumberSearch" x-transition class="mt-2">
+            <textarea x-model="numberInput" @input.debounce.500ms="searchByNumbers()"
+                placeholder="Números separados por coma o espacio (ej: C001, C002, R003)"
+                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm h-20 resize-none"></textarea>
+            <div x-show="numberResults.length > 0" class="mt-2 text-xs">
+                <span class="text-green-400">✓ En colección: {{ numberResults.filter(r => r.collected).length }}</span>
+                <span class="text-red-400 ml-2">✗ Faltan: {{ numberResults.filter(r => !r.collected).length }}</span>
+            </div>
+            <div x-show="numberResults.length > 0" class="mt-2 max-h-60 overflow-y-auto space-y-1">
+                <template x-for="r in numberResults" :key="r.card_number">
+                    <div class="flex items-center justify-between bg-gray-700 rounded px-2 py-1">
+                        <div class="flex items-center gap-2">
+                            <i :class="r.collected ? 'fas fa-check-circle text-green-400' : 'fas fa-circle-xmark text-red-400'"></i>
+                            <span class="text-white font-mono" x-text="r.card_number"></span>
+                            <span class="text-gray-400 truncate" x-text="r.name"></span>
+                        </div>
+                        <a x-show="!r.collected && r.id" :href="'{{ route('cards.create') }}?card_id=' + r.id"
+                           class="text-blue-400 hover:text-blue-300 text-xs">
+                            <i class="fas fa-plus"></i> Añadir
+                        </a>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <form x-ref="searchForm" method="GET" action="{{ route('cards.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <div>
             <label class="block text-xs text-gray-400 mb-1">Buscar</label>
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Nombre..." class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm">
+            <input type="text" name="search" x-model="searchQuery"
+                value="{{ request('search') }}" placeholder="Nombre..."
+                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm">
         </div>
         <div>
             <label class="block text-xs text-gray-400 mb-1">Set</label>
@@ -122,6 +156,45 @@
         </label>
     </div>
 </form>
+</div>
+
+<script>
+function cardSearch() {
+    return {
+        searchQuery: '{{ request('search') }}',
+        numberInput: '',
+        numberResults: [],
+        showNumberSearch: false,
+
+        submitSearch() {
+            // Dejar que el form se envíe normalmente
+        },
+
+        searchByNumbers() {
+            if (!this.numberInput.trim()) {
+                this.numberResults = [];
+                return;
+            }
+            const nums = this.numberInput
+                .split(/[,;\s]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+
+            if (nums.length === 0) {
+                this.numberResults = [];
+                return;
+            }
+
+            fetch('{{ route("cards.search-by-numbers") }}?numbers=' + encodeURIComponent(nums.join(',')))
+                .then(r => r.json())
+                .then(data => {
+                    this.numberResults = data;
+                })
+                .catch(err => console.error(err));
+        }
+    };
+}
+</script>
 
 <!-- Cards -->
 <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
