@@ -195,8 +195,8 @@ class CardController extends Controller
 
         // Obtener las cartas del set que ya tiene el usuario
         $ownedCardIds = UserCard::where('user_id', auth()->id())
-            ->where('card_id', function($q) use ($setId) {
-                $q->select('id')->from('cards')->where('set_id', $setId);
+            ->whereHas('card', function($q) use ($setId) {
+                $q->where('set_id', $setId);
             })
             ->pluck('card_id')
             ->toArray();
