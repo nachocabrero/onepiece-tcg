@@ -224,6 +224,106 @@ class CardController extends Controller
         return $pdf->download("faltantes_{$set->code}.pdf");
     }
 
+    public function searchBySetNumbers(Request $request)
+    {
+        $text = trim($request->query('text', ''));
+        if ($text === '') {
+            return response()->json([]);
+        }
+
+        $parsed = [];
+        foreach (preg_split('/[\r\n]+/', $text) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $lineMatched = false;
+            if (preg_match_all('/([A-Za-z]{1,4}-?\d{0,3})[\s:-]+(\d{1,4})/i', $line, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $m) {
+                    $lineMatched = true;
+                    $setCode = strtoupper($m[1]);
+                    $num = $m[2];
+                    $prefix = str_replace('-', '', $setCode);
+                    $n3 = str_pad($num, 3, '0', STR_PAD_LEFT);
+                    $candidates = ["{$prefix}-{$n3}", "{$prefix}-{$num}"];
+                    if (str_starts_with($prefix, 'P')) {
+                        $candidates[] = "P-{$num}";
+                        $candidates[] = "P-{$n3}";
+                    }
+                    $parsed[] = [
+                        'raw' => $m[0],
+                        'set_code' => $setCode,
+                        'number' => $num,
+                        'candidates' => array_values(array_unique($candidates)),
+                    ];
+                }
+            }
+
+            if (!$lineMatched) {
+                $parsed[] = [
+                    'raw' => $line,
+                    'set_code' => '',
+                    'number' => '',
+                    'candidates' => [],
+                ];
+            }
+        }
+
+        $allCandidates = array_values(array_unique(array_merge(...array_column($parsed, 'candidates'))));
+        $cards = [];
+        if (!empty($allCandidates)) {
+            $cards = Card::with('set')->whereIn('card_number', $allCandidates)->get()->keyBy('card_number');
+        }
+
+        $ownedNumbers = [];
+        if (!empty($allCandidates)) {
+            $ownedNumbers = UserCard::where('user_id', auth()->id())
+                ->join('cards', 'user_cards.card_id', '=', 'cards.id')
+                ->whereIn('cards.card_number', $allCandidates)
+                ->pluck('cards.card_number')
+                ->toArray();
+        }
+
+        $results = [];
+        foreach ($parsed as $p) {
+            $card = null;
+            foreach ($p['candidates'] as $cn) {
+                if (isset($cards[$cn])) {
+                    $card = $cards[$cn];
+                    break;
+                }
+            }
+            if ($card) {
+                $results[] = [
+                    'id' => $card->id,
+                    'card_number' => $card->card_number,
+                    'name' => $card->name,
+                    'set_code' => $card->set->code ?? '',
+                    'collected' => in_array($card->card_number, $ownedNumbers),
+                ];
+            } elseif (empty($p['candidates'])) {
+                $results[] = [
+                    'id' => null,
+                    'card_number' => $p['raw'],
+                    'name' => 'Formato no reconocido',
+                    'set_code' => '',
+                    'collected' => false,
+                ];
+            } else {
+                $results[] = [
+                    'id' => null,
+                    'card_number' => $p['set_code'] . ' ' . $p['number'],
+                    'name' => 'No encontrado en catálogo',
+                    'set_code' => $p['set_code'],
+                    'collected' => false,
+                ];
+            }
+        }
+
+        return response()->json($results);
+    }
+
     public function searchByNumbers(Request $request)
     {
         $numbers = $request->query('numbers', '');

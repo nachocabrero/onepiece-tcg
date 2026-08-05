@@ -37,6 +37,9 @@ Route::middleware('auth')->group(function () {
     // Search by numbers
     Route::get('/cards/search-by-numbers', [CardController::class, 'searchByNumbers'])->name('cards.search-by-numbers');
 
+    // Search by set code + numbers (bulk text)
+    Route::get('/cards/search-by-set-numbers', [CardController::class, 'searchBySetNumbers'])->name('cards.search-by-set-numbers');
+
     // CRUD routes
     Route::resource('sets', SetController::class);
     Route::resource('rarities', RarityController::class);

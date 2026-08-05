@@ -65,8 +65,8 @@
                 placeholder="Números separados por coma o espacio (ej: C001, C002, R003)"
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm h-20 resize-none"></textarea>
             <div x-show="numberResults.length > 0" class="mt-2 text-xs">
-                <span class="text-green-400">✓ En colección: {{ numberResults.filter(r => r.collected).length }}</span>
-                <span class="text-red-400 ml-2">✗ Faltan: {{ numberResults.filter(r => !r.collected).length }}</span>
+                <span class="text-green-400">✓ En colección: <span x-text="numberResults.filter(r => r.collected).length"></span></span>
+                <span class="text-red-400 ml-2">✗ Faltan: <span x-text="numberResults.filter(r => !r.collected).length"></span></span>
             </div>
             <div x-show="numberResults.length > 0" class="mt-2 max-h-60 overflow-y-auto space-y-1">
                 <template x-for="r in numberResults" :key="r.card_number">
@@ -158,6 +158,50 @@
 </form>
 </div>
 
+<!-- Bulk search by set + number -->
+<div x-data="setCardSearch()" class="mb-6 bg-gray-800 rounded-lg p-3 border border-gray-700">
+    <button @click="showBulk = !showBulk" class="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
+        <i :class="showBulk ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+        Buscar lista por set y número
+    </button>
+    <div x-show="showBulk" x-transition class="mt-2">
+        <textarea x-model="bulkInput" placeholder="Pega el texto con set y número (Ej: OP-12 110, OP-10 9&#10;OP-05 1)"
+                  class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm h-24 resize-none"></textarea>
+        <div class="flex items-center gap-3 mt-2">
+            <button @click="searchBulk()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold px-4 py-2 rounded transition text-sm">
+                <i class="fas fa-search mr-1"></i>Buscar
+            </button>
+            <button @click="bulkInput=''; bulkResults=[]; bulkDone=false" x-show="bulkResults.length > 0" class="text-gray-400 hover:text-white text-xs">
+                <i class="fas fa-times mr-1"></i>Limpiar
+            </button>
+        </div>
+        <template x-if="bulkDone">
+            <div class="mt-3">
+                <div class="text-xs mb-2">
+                    <span class="text-green-400">✓ En colección: <span x-text="bulkResults.filter(r => r.collected).length"></span></span>
+                    <span class="text-red-400 ml-2">✗ Faltan: <span x-text="bulkResults.filter(r => !r.collected && r.id).length"></span></span>
+                    <span class="text-gray-400 ml-2">Sin resultado: <span x-text="bulkResults.filter(r => !r.id).length"></span></span>
+                </div>
+                <div class="max-h-80 overflow-y-auto space-y-1 border border-gray-700 rounded p-2">
+                    <template x-for="(r, i) in bulkResults" :key="i">
+                        <div class="flex items-center justify-between bg-gray-700/50 rounded px-2 py-1">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i :class="r.id ? (r.collected ? 'fas fa-check-circle text-green-400' : 'fas fa-circle-xmark text-red-400') : 'fas fa-question-circle text-gray-500'"></i>
+                                <span class="text-white font-mono text-xs" x-text="r.card_number"></span>
+                                <span class="text-gray-400 truncate text-xs" x-text="r.name"></span>
+                            </div>
+                            <a x-show="r.id && !r.collected" :href="'{{ route('cards.create') }}?card_id=' + r.id"
+                               class="text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap ml-2">
+                                <i class="fas fa-plus"></i> Añadir
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
 <script>
 function cardSearch() {
     return {
@@ -189,6 +233,27 @@ function cardSearch() {
                 .then(r => r.json())
                 .then(data => {
                     this.numberResults = data;
+                })
+                .catch(err => console.error(err));
+        }
+    };
+}
+
+function setCardSearch() {
+    return {
+        bulkInput: '',
+        bulkResults: [],
+        bulkDone: false,
+        showBulk: false,
+        searchBulk() {
+            if (!this.bulkInput.trim()) return;
+            this.bulkResults = [];
+            this.bulkDone = false;
+            fetch('{{ route("cards.search-by-set-numbers") }}?text=' + encodeURIComponent(this.bulkInput))
+                .then(r => r.json())
+                .then(data => {
+                    this.bulkResults = data;
+                    this.bulkDone = true;
                 })
                 .catch(err => console.error(err));
         }

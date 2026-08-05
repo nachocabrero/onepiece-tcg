@@ -35,35 +35,35 @@ class CatalogController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('card_number', 'like', "%{$search}%")
-                  ->orWhere('attribute', 'like', "%{$search}%")
-                  ->orWhere('feature', 'like', "%{$search}%");
+                $q->where('cards.name', 'like', "%{$search}%")
+                  ->orWhere('cards.card_number', 'like', "%{$search}%")
+                  ->orWhere('cards.attribute', 'like', "%{$search}%")
+                  ->orWhere('cards.feature', 'like', "%{$search}%");
             });
         }
 
         if ($request->filled('set_id')) {
-            $query->where('set_id', $request->set_id);
+            $query->where('cards.set_id', $request->set_id);
         }
 
         if ($request->filled('rarity_id')) {
-            $query->where('rarity_id', $request->rarity_id);
+            $query->where('cards.rarity_id', $request->rarity_id);
         }
 
         if ($request->filled('color')) {
-            $query->where('color', $request->color);
+            $query->where('cards.color', $request->color);
         }
 
         if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $query->where('cards.type', $request->type);
         }
 
         if ($request->filled('attribute')) {
-            $query->where('attribute', $request->attribute);
+            $query->where('cards.attribute', $request->attribute);
         }
 
         $cards = $query->orderBy('sets.code')
-                       ->orderBy('card_number')
+                       ->orderBy('cards.card_number')
                        ->paginate(50);
 
         $sets = Set::orderBy('code')->get();
