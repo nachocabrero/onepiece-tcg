@@ -147,9 +147,15 @@
                 <tr class="hover:bg-gray-750 {{ $userCard->copies_owned > 1 ? 'bg-yellow-900/10' : '' }}">
                     <td class="px-4 py-3">
                         <div class="font-medium text-white">{{ $userCard->card->name }}</div>
+                        @if($userCard->card->name_es)
+                        <div class="text-xs text-yellow-400">{{ $userCard->card->name_es }}</div>
+                        @endif
                         <div class="text-xs text-gray-500">{{ $userCard->card->card_number }}</div>
                         @if($userCard->card->character)
                         <div class="text-xs text-gray-400">{{ $userCard->card->character }}</div>
+                        @endif
+                        @if($userCard->card->character_es)
+                        <div class="text-xs text-gray-500">{{ $userCard->card->character_es }}</div>
                         @endif
                         @if($userCard->copies_owned > 1)
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400 mt-1">
