@@ -27,6 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
     Route::delete('/cards/{card}', [CardController::class, 'destroy'])->name('cards.destroy');
 
+    // PDF downloads
+    Route::get('/cards/missing-pdf', [CardController::class, 'downloadMissingPdf'])->name('cards.missing-pdf');
+    Route::get('/cards/set/{setId}/missing-pdf', [CardController::class, 'downloadSetPdf'])->name('cards.set-pdf');
+
     // Catalog toggle
     Route::post('/catalog/{card}/toggle', [CatalogController::class, 'toggleCollected'])->name('catalog.toggle');
 

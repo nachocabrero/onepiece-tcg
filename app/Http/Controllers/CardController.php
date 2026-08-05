@@ -7,6 +7,7 @@ use App\Models\Card;
 use App\Models\Set;
 use App\Models\Rarity;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CardController extends Controller
 {
@@ -145,5 +146,80 @@ class CardController extends Controller
         }
         $card->delete();
         return redirect()->route('cards.index')->with('success', 'Carta eliminada de la colección.');
+    }
+
+    public function downloadMissingPdf(Request $request)
+    {
+        // Obtener las cartas que ya tiene el usuario
+        $ownedCardIds = UserCard::where('user_id', auth()->id())
+            ->pluck('card_id')
+            ->toArray();
+
+        // Obtener las cartas del catálogo que NO tiene
+        $missingQuery = Card::with(['set', 'rarity'])
+            ->whereNotIn('id', $ownedCardIds);
+
+        // Aplicar filtros si se envían
+        if ($request->filled('set_id')) {
+            $missingQuery->where('set_id', $request->set_id);
+        }
+        if ($request->filled('rarity_id')) {
+            $missingQuery->where('rarity_id', $request->rarity_id);
+        }
+        if ($request->filled('color')) {
+            $missingQuery->where('color', $request->color);
+        }
+        if ($request->filled('type')) {
+            $missingQuery->where('type', $request->type);
+        }
+
+        $missingCards = $missingQuery->orderBy('set_id')->orderBy('card_number')->get();
+
+        $totalCatalog = Card::count();
+        $ownedCount = count($ownedCardIds);
+        $missingCount = $missingCards->count();
+
+        $pdf = Pdf::loadView('cards.missing-pdf', compact(
+            'missingCards',
+            'totalCatalog',
+            'ownedCount',
+            'missingCount'
+        ));
+
+        return $pdf->download('cartas_faltantes.pdf');
+    }
+
+    public function downloadSetPdf($setId, Request $request)
+    {
+        $set = Set::findOrFail($setId);
+
+        // Obtener las cartas del set que ya tiene el usuario
+        $ownedCardIds = UserCard::where('user_id', auth()->id())
+            ->where('card_id', function($q) use ($setId) {
+                $q->select('id')->from('cards')->where('set_id', $setId);
+            })
+            ->pluck('card_id')
+            ->toArray();
+
+        // Cartas del set que NO tiene
+        $missingCards = Card::with(['rarity'])
+            ->where('set_id', $setId)
+            ->whereNotIn('id', $ownedCardIds)
+            ->orderBy('card_number')
+            ->get();
+
+        $totalInSet = Card::where('set_id', $setId)->count();
+        $ownedInSet = count($ownedCardIds);
+        $missingInSet = $missingCards->count();
+
+        $pdf = Pdf::loadView('cards.set-pdf', compact(
+            'set',
+            'missingCards',
+            'totalInSet',
+            'ownedInSet',
+            'missingInSet'
+        ));
+
+        return $pdf->download("faltantes_{$set->code}.pdf");
     }
 }

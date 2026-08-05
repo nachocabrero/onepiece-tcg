@@ -36,6 +36,22 @@
     </div>
 </div>
 
+<!-- PDF Download buttons -->
+<div class="flex flex-wrap gap-2 mb-6">
+    <a href="{{ route('cards.missing-pdf', request()->except('page')) }}" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded transition text-sm">
+        <i class="fas fa-file-pdf mr-2"></i>Descargar Faltantes (Todo)
+    </a>
+    <div class="flex flex-wrap gap-1">
+        @foreach($sets as $set)
+        <a href="{{ route('cards.set-pdf', ['setId' => $set->id, 'set_id' => $set->id]) }}"
+           class="bg-gray-700 hover:bg-gray-600 text-gray-300 py-1 px-2 rounded text-xs transition border border-gray-600"
+           title="Faltantes de {{ $set->code }}">
+            {{ $set->code }}
+        </a>
+        @endforeach
+    </div>
+</div>
+
 <!-- Filters -->
 <form method="GET" action="{{ route('cards.index') }}" class="mb-6 bg-gray-800 rounded-lg p-3 border border-gray-700">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
