@@ -5,7 +5,7 @@ SEED_DB=/app-seed/database.sqlite
 DB_DIR=/var/www/html/database
 DB_FILE=$DB_DIR/database.sqlite
 
-mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/fonts
 chown -R www-data:www-data storage bootstrap/cache database 2>/dev/null || true
 
 if [ ! -f "$DB_FILE" ]; then

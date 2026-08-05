@@ -8,6 +8,7 @@ tests
 README.md
 *.md
 storage/logs/*
+storage/fonts/*
 storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*

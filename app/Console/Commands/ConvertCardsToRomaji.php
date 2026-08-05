@@ -59,7 +59,7 @@ class ConvertCardsToRomaji extends Command
 
     protected function includeKana2Roma(): void
     {
-        $file = __DIR__ . '/../../vendor/hikarine3/kana2roma/src/Kana2Roma.php';
+        $file = base_path('vendor/hikarine3/kana2roma/src/Kana2Roma.php');
         if (file_exists($file)) {
             include $file;
         }

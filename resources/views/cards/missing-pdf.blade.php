@@ -3,7 +3,13 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: sans-serif; font-size: 10px; color: #1a1a1a; }
+        @font-face {
+            font-family: 'Noto Sans JP';
+            font-style: normal;
+            font-weight: normal;
+            src: url('{{ storage_path('fonts/NotoSansJP-Regular.ttf') }}') format('truetype');
+        }
+        body { font-family: 'Noto Sans JP', sans-serif; font-size: 10px; color: #1a1a1a; }
         .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #eab308; }
         .header h1 { margin: 0; font-size: 18px; color: #eab308; }
         .header p { margin: 4px 0 0; color: #666; font-size: 10px; }
