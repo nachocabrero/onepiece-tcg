@@ -71,8 +71,14 @@
             @foreach($missingCards as $card)
             <tr>
                 <td>{{ $card->card_number }}</td>
-                <td><strong>{{ $card->name }}</strong></td>
-                <td>{{ $card->character ?? '—' }}</td>
+                <td><strong>{{ $card->name }}</strong>
+                @if($card->name_es)
+                <br><span style="color: #eab308; font-size: 8px;">{{ $card->name_es }}</span>
+                @endif</td>
+                <td>{{ $card->character ?? '—' }}
+                @if($card->character_es)
+                <br><span style="color: #666; font-size: 8px;">{{ $card->character_es }}</span>
+                @endif</td>
                 <td>
                     @php
                         $colorMap = [
