@@ -77,7 +77,7 @@
                             <span class="text-gray-400 truncate" x-text="r.name"></span>
                         </div>
                         <button x-show="!r.collected && r.id"
-                                x-on:click.prevent="toggleCard({{ r.id }}, $event)"
+                                x-on:click.prevent="toggleCard(@{{ r.id }}, $event)"
                                 class="text-blue-400 hover:text-blue-300 text-xs">
                             <i class="fas fa-plus"></i> Añadir
                         </button>
@@ -192,7 +192,7 @@
                                 <span class="text-gray-400 truncate text-xs" x-text="r.name"></span>
                             </div>
                             <button x-show="r.id && !r.collected"
-                                x-on:click.prevent="toggleCard({{ r.id }}, $event)"
+                                x-on:click.prevent="toggleCard(@{{ r.id }}, $event)"
                                 class="text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap ml-2">
                                 <i class="fas fa-plus"></i> Añadir
                             </button>
@@ -247,7 +247,9 @@ searchByNumbers() {
             fetch('{{ route("catalog.toggle", ":id") }}'.replace(':id', cardId), {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
             })
             .then(r => r.json())
@@ -292,7 +294,9 @@ function setCardSearch() {
             fetch('{{ route("catalog.toggle", ":id") }}'.replace(':id', cardId), {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
             })
             .then(r => r.json())
