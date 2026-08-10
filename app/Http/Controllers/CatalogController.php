@@ -111,6 +111,7 @@ class CatalogController extends Controller
         
         if ($userCard) {
             $userCard->delete();
+            $collected = false;
             $message = 'Carta eliminada de la colección';
         } else {
             UserCard::create([
@@ -122,13 +123,15 @@ class CatalogController extends Controller
                 'value' => 0,
                 'copies_wanted' => 0,
             ]);
+            $collected = true;
             $message = 'Carta añadida a la colección';
         }
         
         if (request()->header('X-Requested-With') === 'XMLHttpRequest' || request()->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => $message
+                'message' => $message,
+                'collected' => $collected
             ]);
         }
         

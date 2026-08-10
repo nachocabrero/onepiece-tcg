@@ -76,10 +76,11 @@
                             <span class="text-white font-mono" x-text="r.card_number"></span>
                             <span class="text-gray-400 truncate" x-text="r.name"></span>
                         </div>
-                        <a x-show="!r.collected && r.id" :href="'{{ route('cards.create') }}?card_id=' + r.id"
-                           class="text-blue-400 hover:text-blue-300 text-xs">
+                        <button x-show="!r.collected && r.id"
+                                x-on:click.prevent="toggleCard({{ r.id }}, $event)"
+                                class="text-blue-400 hover:text-blue-300 text-xs">
                             <i class="fas fa-plus"></i> Añadir
-                        </a>
+                        </button>
                     </div>
                 </template>
             </div>
@@ -190,10 +191,11 @@
                                 <span class="text-white font-mono text-xs" x-text="r.card_number"></span>
                                 <span class="text-gray-400 truncate text-xs" x-text="r.name"></span>
                             </div>
-                            <a x-show="r.id && !r.collected" :href="'{{ route('cards.create') }}?card_id=' + r.id"
-                               class="text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap ml-2">
+                            <button x-show="r.id && !r.collected"
+                                x-on:click.prevent="toggleCard({{ r.id }}, $event)"
+                                class="text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap ml-2">
                                 <i class="fas fa-plus"></i> Añadir
-                            </a>
+                            </button>
                         </div>
                     </template>
                 </div>
@@ -214,13 +216,13 @@ function cardSearch() {
             // Dejar que el form se envíe normalmente
         },
 
-        searchByNumbers() {
+searchByNumbers() {
             if (!this.numberInput.trim()) {
                 this.numberResults = [];
                 return;
             }
             const nums = this.numberInput
-                .split(/[,;\s]+/)
+                .split(/[,;\\s]+/)
                 .map(s => s.trim())
                 .filter(s => s.length > 0);
 
@@ -235,6 +237,30 @@ function cardSearch() {
                     this.numberResults = data;
                 })
                 .catch(err => console.error(err));
+        },
+
+        toggleCard(cardId, event) {
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch('{{ route("catalog.toggle", ":id") }}'.replace(':id', cardId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    this.numberResults = this.numberResults.map(r => r.id === cardId ? { ...r, collected: data.collected } : r);
+                }
+            })
+            .catch(err => console.error(err))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus"></i> Añadir';
+            });
         }
     };
 }
@@ -256,6 +282,30 @@ function setCardSearch() {
                     this.bulkDone = true;
                 })
                 .catch(err => console.error(err));
+        },
+
+        toggleCard(cardId, event) {
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch('{{ route("catalog.toggle", ":id") }}'.replace(':id', cardId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    this.bulkResults = this.bulkResults.map(r => r.id === cardId ? { ...r, collected: data.collected } : r);
+                }
+            })
+            .catch(err => console.error(err))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus"></i> Añadir';
+            });
         }
     };
 }
