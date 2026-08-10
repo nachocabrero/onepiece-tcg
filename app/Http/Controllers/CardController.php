@@ -324,6 +324,44 @@ class CardController extends Controller
         return response()->json($results);
     }
 
+    public function addMany(Request $request)
+    {
+        $validated = $request->validate([
+            'card_ids' => ['required', 'array'],
+            'card_ids.*' => ['integer', 'exists:cards,id'],
+        ]);
+
+        $cardIds = array_values(array_unique($validated['card_ids']));
+        $existingIds = UserCard::where('user_id', auth()->id())
+            ->whereIn('card_id', $cardIds)
+            ->pluck('card_id')
+            ->toArray();
+
+        $toAdd = array_diff($cardIds, $existingIds);
+
+        $now = now();
+        $rows = array_map(fn ($cardId) => [
+            'user_id' => auth()->id(),
+            'card_id' => $cardId,
+            'copies_owned' => 1,
+            'condition' => 'MT',
+            'price_paid' => 0,
+            'value' => 0,
+            'copies_wanted' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $toAdd);
+
+        if (!empty($rows)) {
+            UserCard::insert($rows);
+        }
+
+        return response()->json([
+            'success' => true,
+            'added' => count($toAdd),
+        ]);
+    }
+
     public function searchByNumbers(Request $request)
     {
         $numbers = $request->query('numbers', '');

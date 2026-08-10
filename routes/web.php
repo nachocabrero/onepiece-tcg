@@ -40,6 +40,9 @@ Route::middleware('auth')->group(function () {
     // Search by set code + numbers (bulk text)
     Route::get('/cards/search-by-set-numbers', [CardController::class, 'searchBySetNumbers'])->name('cards.search-by-set-numbers');
 
+    // Add multiple cards to collection at once
+    Route::post('/cards/add-many', [CardController::class, 'addMany'])->name('cards.add-many');
+
     // CRUD routes
     Route::resource('sets', SetController::class);
     Route::resource('rarities', RarityController::class);

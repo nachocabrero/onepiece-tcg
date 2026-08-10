@@ -64,9 +64,14 @@
             <textarea x-model="numberInput" @input.debounce.500ms="searchByNumbers()"
                 placeholder="Números separados por coma o espacio (ej: C001, C002, R003)"
                 class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm h-20 resize-none"></textarea>
-            <div x-show="numberResults.length > 0" class="mt-2 text-xs">
+            <div x-show="numberResults.length > 0" class="mt-2 flex items-center gap-3 text-xs">
                 <span class="text-green-400">✓ En colección: <span x-text="numberResults.filter(r => r.collected).length"></span></span>
-                <span class="text-red-400 ml-2">✗ Faltan: <span x-text="numberResults.filter(r => !r.collected).length"></span></span>
+                <span class="text-red-400 ml-2">✗ Faltan: <span x-text="numberResults.filter(r => !r.collected && r.id).length"></span></span>
+                <button x-show="numberResults.some(r => !r.collected && r.id)"
+                        x-on:click.prevent="addAll(numberResults)"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-1 rounded transition ml-auto">
+                    <i class="fas fa-plus mr-1"></i>Añadir todas
+                </button>
             </div>
             <div x-show="numberResults.length > 0" class="mt-2 max-h-60 overflow-y-auto space-y-1">
                 <template x-for="r in numberResults" :key="r.card_number">
@@ -178,10 +183,15 @@
         </div>
         <template x-if="bulkDone">
             <div class="mt-3">
-                <div class="text-xs mb-2">
+                <div class="text-xs mb-2 flex items-center gap-3">
                     <span class="text-green-400">✓ En colección: <span x-text="bulkResults.filter(r => r.collected).length"></span></span>
                     <span class="text-red-400 ml-2">✗ Faltan: <span x-text="bulkResults.filter(r => !r.collected && r.id).length"></span></span>
                     <span class="text-gray-400 ml-2">Sin resultado: <span x-text="bulkResults.filter(r => !r.id).length"></span></span>
+                    <button x-show="bulkResults.some(r => !r.collected && r.id)"
+                            x-on:click.prevent="addAll(bulkResults)"
+                            class="bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-1 rounded transition ml-auto">
+                        <i class="fas fa-plus mr-1"></i>Añadir todas
+                    </button>
                 </div>
                 <div class="max-h-80 overflow-y-auto space-y-1 border border-gray-700 rounded p-2">
                     <template x-for="(r, i) in bulkResults" :key="i">
@@ -263,6 +273,30 @@ searchByNumbers() {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-plus"></i> Añadir';
             });
+        },
+
+        addAll(results) {
+            const ids = results.filter(r => r.id && !r.collected).map(r => r.id);
+            if (ids.length === 0) return;
+
+            fetch('{{ route("cards.add-many") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ card_ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const added = new Set(ids);
+                    this.numberResults = this.numberResults.map(r => added.has(r.id) ? { ...r, collected: true } : r);
+                }
+            })
+            .catch(err => console.error(err));
         }
     };
 }
@@ -310,6 +344,30 @@ function setCardSearch() {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-plus"></i> Añadir';
             });
+        },
+
+        addAll(results) {
+            const ids = results.filter(r => r.id && !r.collected).map(r => r.id);
+            if (ids.length === 0) return;
+
+            fetch('{{ route("cards.add-many") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ card_ids: ids })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const added = new Set(ids);
+                    this.bulkResults = this.bulkResults.map(r => added.has(r.id) ? { ...r, collected: true } : r);
+                }
+            })
+            .catch(err => console.error(err));
         }
     };
 }
