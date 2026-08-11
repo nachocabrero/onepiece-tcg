@@ -173,13 +173,35 @@
     <div x-show="showBulk" x-transition class="mt-2">
         <textarea x-model="bulkInput" placeholder="Pega el texto con set y número (Ej: OP-12 110, OP-10 9&#10;OP-05 1)"
                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm h-24 resize-none"></textarea>
-        <div class="flex items-center gap-3 mt-2">
+        <div class="flex flex-wrap items-center gap-3 mt-2">
             <button @click="searchBulk()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold px-4 py-2 rounded transition text-sm">
                 <i class="fas fa-search mr-1"></i>Buscar
+            </button>
+            <button @click="toggleScanner()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded transition text-sm">
+                <i class="fas fa-camera mr-1"></i>Escanear Carta
             </button>
             <button @click="bulkInput=''; bulkResults=[]; bulkDone=false" x-show="bulkResults.length > 0" class="text-gray-400 hover:text-white text-xs">
                 <i class="fas fa-times mr-1"></i>Limpiar
             </button>
+        </div>
+
+        <!-- Escáner Modal / Inline -->
+        <div x-show="isScanning" class="mt-4 p-3 bg-gray-900 rounded border border-gray-600 relative">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-yellow-400 font-bold"><i class="fas fa-camera"></i> Escáner OCR (BETA)</span>
+                <button @click="stopScanner()" class="text-gray-400 hover:text-red-400">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="relative bg-black rounded overflow-hidden flex justify-center items-center" style="min-height: 200px;">
+                <video x-ref="videoElement" autoplay playsinline class="max-w-full max-h-[400px] object-cover"></video>
+                <div x-show="scanStatus" class="absolute bottom-2 left-0 right-0 text-center">
+                    <span class="bg-black/70 text-white text-xs px-2 py-1 rounded" x-text="scanStatus"></span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-400 text-center">
+                Apunta al código de la carta (ej: OP01-001). Asegúrate de que haya buena iluminación.
+            </div>
         </div>
         <template x-if="bulkDone">
             <div class="mt-3">
@@ -214,6 +236,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 function cardSearch() {
     return {
@@ -307,6 +330,10 @@ function setCardSearch() {
         bulkResults: [],
         bulkDone: false,
         showBulk: false,
+        isScanning: false,
+        scanStatus: '',
+        videoStream: null,
+        scanInterval: null,
         searchBulk() {
             if (!this.bulkInput.trim()) return;
             this.bulkResults = [];
@@ -318,6 +345,88 @@ function setCardSearch() {
                     this.bulkDone = true;
                 })
                 .catch(err => console.error(err));
+        },
+
+        toggleScanner() {
+            if (this.isScanning) {
+                this.stopScanner();
+            } else {
+                this.startScanner();
+            }
+        },
+
+        startScanner() {
+            if (typeof Tesseract === 'undefined') {
+                alert("La librería Tesseract OCR no está cargada.");
+                return;
+            }
+            this.isScanning = true;
+            this.scanStatus = 'Iniciando cámara...';
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    this.videoStream = stream;
+                    this.$refs.videoElement.srcObject = stream;
+                    this.scanStatus = 'Cámara lista. Buscando código...';
+                    
+                    this.scanInterval = setInterval(() => this.scanFrame(), 1500);
+                })
+                .catch(err => {
+                    console.error("Error accessing camera:", err);
+                    this.scanStatus = 'Error al acceder a la cámara.';
+                    this.stopScanner();
+                });
+        },
+
+        stopScanner() {
+            this.isScanning = false;
+            this.scanStatus = '';
+            if (this.scanInterval) {
+                clearInterval(this.scanInterval);
+                this.scanInterval = null;
+            }
+            if (this.videoStream) {
+                this.videoStream.getTracks().forEach(track => track.stop());
+                this.videoStream = null;
+            }
+        },
+
+        scanFrame() {
+            const video = this.$refs.videoElement;
+            if (!video || video.videoWidth === 0) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            this.scanStatus = 'Analizando imagen...';
+
+            Tesseract.recognize(canvas, 'eng')
+                .then(({ data: { text } }) => {
+                    const cleanText = text.replace(/\s*-\s*/g, '-');
+                    // Look for formats like OP01-001
+                    const match = cleanText.match(/[A-Z0-9]{2,4}-\d{3,4}/);
+                    
+                    if (match) {
+                        const code = match[0];
+                        if (!this.bulkInput.includes(code)) {
+                            this.bulkInput += (this.bulkInput ? '\n' : '') + code;
+                            this.scanStatus = `¡Encontrado: ${code}!`;
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            this.searchBulk();
+                        } else {
+                            this.scanStatus = `Buscando código... (ya tienes ${code})`;
+                        }
+                    } else {
+                        this.scanStatus = 'Buscando código...';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    this.scanStatus = 'Error de lectura';
+                });
         },
 
         toggleCard(cardId, event) {
