@@ -238,6 +238,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+const availableSets = {!! json_encode($sets->pluck('code')) !!};
 function cardSearch() {
     return {
         searchQuery: '{{ request('search') }}',
@@ -403,14 +404,31 @@ function setCardSearch() {
 
             this.scanStatus = 'Analizando imagen...';
 
-            Tesseract.recognize(canvas, 'eng')
+            Tesseract.recognize(canvas, 'eng', {
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-* '
+            })
                 .then(({ data: { text } }) => {
-                    const cleanText = text.replace(/\s*-\s*/g, '-');
-                    // Look for formats like OP01-001
-                    const match = cleanText.match(/[A-Z0-9]{2,4}-\d{3,4}/);
+                    let cleanText = text.toUpperCase().replace(/\s*-\s*/g, '-');
+                    
+                    // Construir patrón dinámico con los sets de la base de datos (ej: OP01|EB01|ST01)
+                    // Filtramos y limpiamos los guiones para que coincidan con la lectura del OCR (ej. EB-01 -> EB01)
+                    const validPrefixes = availableSets.map(s => s.replace(/-/g, '')).filter(s => s.length > 0);
+                    const prefixPattern = validPrefixes.join('|');
+                    // Fijamos la longitud del número a exactamente 3 caracteres para evitar leer letras extrañas como un cuarto número
+                    const dynamicRegex = new RegExp(`(${prefixPattern})-[O0-9IL]{3}`);
+                    
+                    const match = cleanText.match(dynamicRegex);
                     
                     if (match) {
-                        const code = match[0];
+                        let code = match[0];
+                        // Separar set y número
+                        let parts = code.split('-');
+                        let setPart = parts[0];
+                        // Corregir confusiones comunes de OCR en la parte del número (que siempre deben ser números del 001 al 130)
+                        let numPart = parts[1].replace(/O/g, '0').replace(/I/g, '1').replace(/L/g, '1');
+                        
+                        code = `${setPart}-${numPart}`;
+
                         if (!this.bulkInput.includes(code)) {
                             this.bulkInput += (this.bulkInput ? '\n' : '') + code;
                             this.scanStatus = `¡Encontrado: ${code}!`;
