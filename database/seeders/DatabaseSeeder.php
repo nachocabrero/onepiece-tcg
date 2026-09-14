@@ -86,6 +86,8 @@ class DatabaseSeeder extends Seeder
             ['code' => 'P-002', 'name' => 'Promo Card Set 2', 'type' => 'promo', 'series' => 'Various', 'release_year' => 2023, 'total_cards' => 20],
             ['code' => 'P-003', 'name' => 'Promo Card Set 3', 'type' => 'promo', 'series' => 'Various', 'release_year' => 2024, 'total_cards' => 20],
             ['code' => 'P-004', 'name' => 'Promo Card Set 4', 'type' => 'promo', 'series' => 'Various', 'release_year' => 2025, 'total_cards' => 20],
+            // OP-17: The World's Strongest Warriors (Elbaph, 4th anniversary)
+            ['code' => 'OP-17', 'name' => "The World's Strongest Warriors", 'type' => 'main', 'series' => 'Elbaph', 'release_year' => 2026, 'total_cards' => 119],
         ];
 
         foreach ($sets as $s) {
