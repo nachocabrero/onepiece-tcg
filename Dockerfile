@@ -11,7 +11,7 @@ RUN composer install \
     --optimize-autoloader \
     --ignore-platform-req=php
 
-FROM php:8.3-fpm-alpine AS app
+FROM php:8.3.36-fpm-alpine AS app
 
 ARG APP_ENV=production
 
